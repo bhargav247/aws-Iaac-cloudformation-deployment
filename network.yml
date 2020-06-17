@@ -195,6 +195,38 @@ Resources:
         RouteTableId: !Ref PrivateRouteTable2
         SubnetId: !Ref PrivateSubnet2    
 
-
+  LoadBalancerSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http to and from our load balancer
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
     
-  
+  WebServerSecGroup: 
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: Allow http to our hosts and SSH from local only (to troubleshoot, manage and install software)
+        VpcId: !Ref VPC
+        SecurityGroupIngress:
+        -   IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+            CidrIp: 0.0.0.0/0
+        -   IpProtocol: tcp
+            FromPort: 22
+            ToPort: 22
+            CidrIp: 0.0.0.0/0
+        SecurityGroupEgress:
+        -   IpProtocol: tcp
+            FromPort: 0
+            ToPort: 65535
+            CidrIp: 0.0.0.0/0
