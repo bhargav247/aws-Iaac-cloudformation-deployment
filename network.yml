@@ -235,22 +235,23 @@ Resources:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
       UserData:
-          Fn::Base64: !Sub |
-              #!/bin/bash
-              apt-get update -y
-              apt-get install unzip awscli -y
-              apt-get install apache2 -y
-              systemctl start apache2.service
-              cd /var/www/html
-              aws s3 cp s3://s3-iaac-project2//website.zip .
-              unzip -o website.zip
-      ImageId: ami-06f2f779464715dc5
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          apt-get update -y
+          apt-get install unzip awscli -y
+          apt-get install apache2 -y
+          systemctl start apache2.service
+          cd /var/www/html
+          aws s3 cp s3://avbucket1212/udagram.zip ./
+          unzip -o udagram.zip
+          systemctl restart apache2.service
+      ImageId: ami-0d1cd67c26f5fca19
       IamInstanceProfile: !Ref ProfileWithRolesForOurApp
       SecurityGroups:
-      -   Ref: WebServerSecGroup
+        - Ref: WebServerSecGroup
       InstanceType: t3.small
       BlockDeviceMappings:
-      -   DeviceName: "/dev/sdk"
+        - DeviceName: "/dev/sdk"
           Ebs:
               VolumeSize: '10' 
 
@@ -321,13 +322,13 @@ Resources:
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
-        -   Effect: Allow
+          - Effect: Allow
             Principal:
                 Service:
                 - ec2.amazonaws.com
             Action:
-            - sts:AssumeRole
-      Path: "/"
+              - sts:AssumeRole
+      Path: /
 
   RolePolicies:
     Type: AWS::IAM::Policy
@@ -336,20 +337,90 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-        - 
+          - 
             Effect: Allow
             Action: 
-            -   s3:Get*
-            -   s3:List*
-            Resource: 
-            -   arn:aws:s3:::s3-iaac-project2
-            -   arn:aws:s3:::s3-iaac-project2/*
+              - s3:Get*
+              - s3:List*
+            Resource: *
+              - arn:aws:s3:::s3-iaac-project2/*
+              - arn:aws:s3:::s3-iaac-project2
       Roles:
-      -   Ref: UdacityS3ReadOnlyEC2
+        - Ref: UdacityS3ReadOnlyEC2
 
   ProfileWithRolesForOurApp:
     Type: AWS::IAM::InstanceProfile
     Properties:
-        Path: "/"
+        Path: /
         Roles:
-        - Ref: UdacityS3ReadOnlyEC2
+          - Ref: UdacityS3ReadOnlyEC2
+
+Outputs:
+
+  VPC: 
+    Description: A reference to the created VPC
+    Value: !Ref VPC
+    Export:
+      Name: !Sub ${EnvironmentName}-VPCID
+
+  VPCPublicRouteTable:
+    Description: Public Routing
+    Value: !Ref PublicRouteTable
+    Export:
+      Name: !Sub ${EnvironmentName}-PUB-RT
+
+  VPCPrivateRouteTable1:
+    Description: Private Routing AZ1
+    Value: !Ref PrivateRouteTable1
+    Export:
+      Name: !Sub ${EnvironmentName}-PRI1-RT
+
+  VPCPrivateRouteTable2:
+    Description: Private Routing AZ2
+    Value: !Ref PrivateRouteTable2
+    Export:
+      Name: !Sub ${EnvironmentName}-PRI2-RT
+
+  PublicSubnets:
+    Description: A list of the public subnets
+    Value: !Join [ ",", [ !Ref PublicSubnet1, !Ref PublicSubnet2 ]]
+    Export:
+      Name: !Sub ${EnvironmentName}-PUB-NETS
+
+  PrivateSubnets:
+    Description: A list of the private subnets
+    Value: !Join [ ",", [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ]]
+    Export:
+      Name: !Sub ${EnvironmentName}-PRIV-NETS
+
+  PublicSubnet1:
+    Description: A reference to the public subnet in the 1st Availability Zone
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub ${EnvironmentName}-PUB1-SN
+
+  PublicSubnet2: 
+    Description: A reference to the public subnet in the 2nd Availability Zone
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub ${EnvironmentName}-PUB2-SN
+
+  PrivateSubnet1:
+    Description: A reference to the private subnet in the 1st Availability Zone
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub ${EnvironmentName}-PRI1-SN
+
+  PrivateSubnet2: 
+    Description: A reference to the private subnet in the 2nd Availability Zone
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub ${EnvironmentName}-PRI2-SN
+  
+  WebAppLB:
+    Description: The DNSName of the load balancer
+    Value: !Join  ["", [ "http://" , !GetAtt WebAppLB.DNSName]]
+    Export:
+          Name: !Sub ${EnvironmentName}-LB-DNS
+  
+  
