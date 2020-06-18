@@ -1,7 +1,7 @@
 [
     {
         "ParameterKey": "EnvironmentName",
-        "ParameterValue": "IaaC project"
+        "ParameterValue": "IaaC-project"
     },
     {
         "ParameterKey":"VpcCIDR",

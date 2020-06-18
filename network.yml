@@ -217,16 +217,16 @@ Resources:
       GroupDescription: Allow http to our hosts and SSH from local only (to troubleshoot, manage and install software)
       VpcId: !Ref VPC
       SecurityGroupIngress:
-      -   IpProtocol: tcp
+        - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
-      -   IpProtocol: tcp
+        - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
           CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
-      -   IpProtocol: tcp
+        - IpProtocol: tcp
           FromPort: 0
           ToPort: 65535
           CidrIp: 0.0.0.0/0
@@ -242,7 +242,7 @@ Resources:
           apt-get install apache2 -y
           systemctl start apache2.service
           cd /var/www/html
-          aws s3 cp s3://avbucket1212/udagram.zip ./
+          aws s3 cp s3://avbucket1212/udagram.zip . --region ap-southeast-2
           unzip -o udagram.zip
           systemctl restart apache2.service
       ImageId: ami-0d1cd67c26f5fca19
@@ -339,21 +339,21 @@ Resources:
         Statement:
           - 
             Effect: Allow
-            Action: 
-              - s3:Get*
-              - s3:List*
-            Resource: *
-              - arn:aws:s3:::s3-iaac-project2/*
-              - arn:aws:s3:::s3-iaac-project2
+            Action: s3:* 
+              #- s3:Get*
+              #- s3:List*
+            Resource: "*"
+              #- arn:aws:s3:::s3-iaac-project2/*
+              #- arn:aws:s3:::s3-iaac-project2
       Roles:
-        - Ref: UdacityS3ReadOnlyEC2
+        - !Ref UdacityS3ReadOnlyEC2
 
   ProfileWithRolesForOurApp:
     Type: AWS::IAM::InstanceProfile
     Properties:
         Path: /
         Roles:
-          - Ref: UdacityS3ReadOnlyEC2
+          - UdacityS3ReadOnlyEC2
 
 Outputs:
 
