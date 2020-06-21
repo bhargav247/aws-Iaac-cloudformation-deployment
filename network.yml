@@ -116,14 +116,14 @@ Resources:
   NatGateway1: 
     Type: AWS::EC2::NatGateway
     Properties: 
-        AllocationId: !GetAtt NatGateway1EIP.AllocationId
-        SubnetId: !Ref PublicSubnet1
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
 
   NatGateway2: 
     Type: AWS::EC2::NatGateway
     Properties:
-        AllocationId: !GetAtt NatGateway2EIP.AllocationId
-        SubnetId: !Ref PublicSubnet2
+      AllocationId: !GetAtt NatGateway2EIP.AllocationId
+      SubnetId: !Ref PublicSubnet2
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
@@ -167,7 +167,7 @@ Resources:
         RouteTableId: !Ref PrivateRouteTable1
         DestinationCidrBlock: 0.0.0.0/0
         NatGatewayId: !Ref NatGateway1
-
+  
   PrivateSubnet1RouteTableAssociation: 
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -181,7 +181,7 @@ Resources:
         Tags: 
             - Key: Name 
               Value: !Sub ${EnvironmentName} Private Routes (AZ2)
-
+  
   DefaultPrivateRoute2:
     Type: AWS::EC2::Route
     Properties:
@@ -231,6 +231,47 @@ Resources:
           ToPort: 65535
           CidrIp: 0.0.0.0/0
   
+  UdacityS3ReadOnlyEC2: 
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: 2012-10-17
+        Statement: 
+          - 
+            Effect: Allow
+            Principal: 
+              Service: 
+                - ec2.amazonaws.com
+            Action: 
+              - sts:AssumeRole
+      Path: /
+      RoleName: UdacityS3ReadOnlyEC2
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+
+  RolePolicies: 
+    Type: AWS::IAM::Policy
+    Properties: 
+      PolicyName: !Sub ${EnvironmentName}-ReadOnly
+      PolicyDocument: 
+        Version: 2012-10-17
+        Statement: 
+          - 
+            Effect: Allow
+            Action:
+              - s3:Get*
+              - s3:List*
+            Resource: '*'
+      Roles: 
+        - 
+          Ref: UdacityS3ReadOnlyEC2
+
+  ProfileWithRolesForOurApp:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+        Roles:
+          - !Ref UdacityS3ReadOnlyEC2
+
   WebAppLaunchConfig: 
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
@@ -242,10 +283,10 @@ Resources:
           apt-get install apache2 -y
           systemctl start apache2.service
           cd /var/www/html
-          aws s3 cp s3://avbucket1212/udagram.zip . --region ap-southeast-2
-          unzip -o udagram.zip
-          systemctl restart apache2.service
-      ImageId: ami-0d1cd67c26f5fca19
+          #echo "Udacity Demo Web Server Up and Running!" > index.html
+          aws s3 cp s3://udacity-demo-1/udacity.zip .
+          unzip -o udacity.zip
+      ImageId: ami-003634241a8fcdec0
       IamInstanceProfile: !Ref ProfileWithRolesForOurApp
       SecurityGroups:
         - Ref: WebServerSecGroup
@@ -276,7 +317,7 @@ Resources:
       - !Ref PrivateSubnet2 
       LaunchConfigurationName:
           Ref: WebAppLaunchConfig
-      MinSize: '4'
+      MinSize: '2'
       MaxSize: '4'
       TargetGroupARNs:
       -   Ref: WebAppTargetGroup
@@ -287,20 +328,20 @@ Resources:
         SecurityGroups:
         - Ref: LoadBalancerSecGroup
         Subnets:
-        - !Ref PublicSubnet1
-        - !Ref PublicSubnet2
+        - Ref: PublicSubnet1
+        - Ref: PublicSubnet2
 
   Listener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
-        DefaultActions:
-        -   Type: forward
-            TargetGroupArn:
-                Ref: WebAppTargetGroup
-        LoadBalancerArn:
-            Ref: WebAppLB
-        Port: 80
-        Protocol: HTTP
+      DefaultActions:
+      -   Type: forward
+          TargetGroupArn:
+              Ref: WebAppTargetGroup
+      LoadBalancerArn:
+          Ref: WebAppLB
+      Port: 80
+      Protocol: HTTP
 
   ALBListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -314,46 +355,6 @@ Resources:
         ListenerArn: !Ref 'Listener'
         Priority: 1
   
-  UdacityS3ReadOnlyEC2:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: 
-          !Sub ${EnvironmentName}-Role
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-                Service:
-                - ec2.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-
-  RolePolicies:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: AmazonS3ReadOnlyAccess
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - 
-            Effect: Allow
-            Action: s3:* 
-              #- s3:Get*
-              #- s3:List*
-            Resource: "*"
-              #- arn:aws:s3:::s3-iaac-project2/*
-              #- arn:aws:s3:::s3-iaac-project2
-      Roles:
-        - !Ref UdacityS3ReadOnlyEC2
-
-  ProfileWithRolesForOurApp:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-        Path: /
-        Roles:
-          - UdacityS3ReadOnlyEC2
 
 Outputs:
 
@@ -421,6 +422,4 @@ Outputs:
     Description: The DNSName of the load balancer
     Value: !Join  ["", [ "http://" , !GetAtt WebAppLB.DNSName]]
     Export:
-          Name: !Sub ${EnvironmentName}-LB-DNS
-  
-  
+          Name: !Sub ${EnvironmentName}-LB-DNS 
