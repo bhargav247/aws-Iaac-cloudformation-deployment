@@ -355,7 +355,6 @@ Resources:
         ListenerArn: !Ref 'Listener'
         Priority: 1
   
-
 Outputs:
 
   VPC: 
